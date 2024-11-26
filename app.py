@@ -1,12 +1,15 @@
 import logging
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
+from flask_migrate import Migrate
 from datetime import datetime, timedelta
 from email_validator import validate_email, EmailNotValidError
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data_base.db'
+
 db = SQLAlchemy(app)
+migrate = Migrate(app, db)
 
 
 class User(db.Model):
@@ -31,12 +34,15 @@ class User(db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     registration_date = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    # Добавил для модели предсказания активности значение ниже
+    last_active_date = db.Column(db.DateTime, nullable=True)
 
     def json(self):
         return {"id": self.id,
                 "username": self.username,
                 "email": self.email,
-                "registration_date": self.registration_date}
+                "registration_date": self.registration_date,
+                "last_active_date": self.last_active_date}
 
 
 with app.app_context():
@@ -58,6 +64,37 @@ def get_user_by_id(user_id):
     except Exception as e:
         logging.error(f"Error fetching user: {e}")
         return None
+
+
+def calculate_activity(user):
+    """
+    Алгоритм предсказания вероятности активности пользователя на основе его истории.
+
+    Возвращает вероятность активности в следующем месяце в процентах (от 0 до 100).
+    """
+    current_date = datetime.utcnow()
+
+    # Будет реализована простейшая модель для предсказания. Я хотел бы использовать машинное обучение и sklearn для
+    # этого, но пока не понял, как правильно со всем этим состыковать/взаимодействовать. Попозже для себя разберусь,
+    # скорее всего
+
+    # Тут подразумевается, что если пользователь долгое время не активень, то вероятность очень низкая
+    if not user.last_active_date:
+        return 10
+
+    days_since_registration = (current_date - user.registration_date).days
+    days_since_last_active = (current_date - user.last_active_date).days
+
+    if days_since_registration > 90 and days_since_last_active <= 14:
+        probability = 80
+    elif days_since_registration <= 30 and days_since_last_active <= 30:
+        probability = 30
+    elif days_since_registration > 30 and days_since_last_active > 30:
+        probability = 50
+    else:
+        probability = 20
+
+    return probability
 
 
 @app.route("/users", methods=["POST"])
@@ -137,7 +174,7 @@ def get_users():
 @app.route("/users/<int:user_id>", methods=["GET"])
 def get_user(user_id):
     """
-    Возвращает информацию о пользователе по его уникальному идентификатору.
+    Возвращает информацию о пользователе по его уникальному идентификатору и обновляет дату его последней активности..
 
     Аргументы:
         user_id (int): Уникальный идентификатор пользователя.
@@ -149,6 +186,8 @@ def get_user(user_id):
     try:
         user = get_user_by_id(user_id)
         if user:
+            user.last_active_date = datetime.utcnow()
+            db.session.commit()
             return make_response(jsonify({"user": user.json()}), 200)
         return make_response(jsonify({"message": "user not found"}), 404)
     except Exception as e:
@@ -159,7 +198,7 @@ def get_user(user_id):
 @app.route("/users/<int:user_id>", methods=["PUT"])
 def update_user(user_id):
     """
-    Обновляет информацию о пользователе по его уникальному идентификатору.
+    Обновляет информацию о пользователе по его уникальному идентификатору и обновляет дату последней активности.
 
     Аргументы:
         user_id (int): Уникальный идентификатор пользователя.
@@ -181,6 +220,8 @@ def update_user(user_id):
                 user.email = data["email"]
             if "registration_date" in data:
                 user.registration_date = data["registration_date"]
+
+            user.last_active_date = datetime.utcnow()
 
             db.session.commit()
             return make_response(jsonify({"message": "user updated"}), 200)
@@ -285,6 +326,20 @@ def get_email_domain_proportion():
                                       "proportions": proportions}), 200)
     except Exception as e:
         logging.error(f"Error calculating email domain proportions: {e}")
+        return make_response(jsonify({"message": str(e)}), 500)
+
+
+@app.route("/users/<int:user_id>/activity_probability", methods=["GET"])
+def get_activity_probability(user_id):
+    try:
+        user = get_user_by_id(user_id)
+        if user:
+            probability = calculate_activity(user)
+            return make_response(jsonify({"user_id": user.id,
+                                          "activity_probability": probability}), 200)
+        return make_response(jsonify({"message": "User not found"}), 404)
+    except Exception as e:
+        logging.error(f"Error fetching activity probability for user {user_id}: {e}")
         return make_response(jsonify({"message": str(e)}), 500)
 
 
