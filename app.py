@@ -2,11 +2,24 @@ import logging
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from flask_swagger_ui import get_swaggerui_blueprint
 from datetime import datetime, timedelta
 from email_validator import validate_email, EmailNotValidError
 
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data_base.db'
+
+# Swagger будет доступен по адресу http://127.0.0.1:5000/swagger
+SWAGGER_URL = '/swagger'
+API_URL = '/static/swagger.json'
+swaggerui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': "User Management API"
+    }
+)
+app.register_blueprint(swaggerui_blueprint, url_prefix=SWAGGER_URL)
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)

@@ -1,0 +1,348 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "API управления пользователями",
+    "description": "API для управления пользователями, отслеживания активности и расчета статистики.",
+    "version": "1.0.0"
+  },
+  "host": "127.0.0.1:5000",
+  "basePath": "/",
+  "schemes": ["http"],
+  "paths": {
+    "/users": {
+      "get": {
+        "summary": "Получить список пользователей",
+        "description": "Получает список всех пользователей.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Номер страницы для пагинации",
+            "required": false,
+            "type": "integer",
+            "default": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Список пользователей",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "page": {
+                  "type": "integer"
+                },
+                "total": {
+                  "type": "integer"
+                },
+                "total_pages": {
+                  "type": "integer"
+                },
+                "users": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Создать нового пользователя",
+        "description": "Создает нового пользователя с указанным именем и email.",
+        "parameters": [
+          {
+            "name": "user",
+            "in": "body",
+            "description": "Пользователь для создания",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserCreate"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Пользователь успешно создан",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "400": {
+            "description": "Некорректный ввод"
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "summary": "Получить пользователя по ID",
+        "description": "Получает пользователя по уникальному ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Пользователь найден",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          },
+          "404": {
+            "description": "Пользователь не найден"
+          }
+        }
+      },
+      "put": {
+        "summary": "Обновить пользователя",
+        "description": "Обновляет данные существующего пользователя.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя для обновления",
+            "required": true,
+            "type": "integer"
+          },
+          {
+            "name": "user",
+            "in": "body",
+            "description": "Обновленные данные пользователя",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/UserCreate"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Пользователь успешно обновлен"
+          },
+          "404": {
+            "description": "Пользователь не найден"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Удалить пользователя",
+        "description": "Удаляет пользователя по ID.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя для удаления",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Пользователь успешно удален"
+          },
+          "404": {
+            "description": "Пользователь не найден"
+          }
+        }
+      }
+    },
+    "/users/last_7_days": {
+      "get": {
+        "summary": "Количество пользователей за последние 7 дней",
+        "description": "Возвращает количество пользователей, зарегистрированных за последние 7 дней.",
+        "responses": {
+          "200": {
+            "description": "Количество пользователей за последние 7 дней",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "users_count_7_days": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/top_5_longest_names": {
+      "get": {
+        "summary": "Топ-5 пользователей с самыми длинными именами",
+        "description": "Возвращает список из 5 пользователей с самыми длинными именами.",
+        "responses": {
+          "200": {
+            "description": "Топ-5 пользователей с самыми длинными именами",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "top_5_longest_names": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/email_domain_proportion": {
+      "get": {
+        "summary": "Пропорция пользователей с определенным доменом email",
+        "description": "Возвращает пропорцию пользователей, чей email соответствует заданному домену.",
+        "parameters": [
+          {
+            "name": "domain",
+            "in": "query",
+            "description": "Домен email для поиска",
+            "required": false,
+            "type": "string",
+            "default": "mail.ru"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Пропорция пользователей с указанным доменом",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "domain": {
+                  "type": "string"
+                },
+                "total_users": {
+                  "type": "integer"
+                },
+                "domain_users": {
+                  "type": "integer"
+                },
+                "proportions": {
+                  "type": "number"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/activity_probability": {
+      "get": {
+        "summary": "Вероятность активности пользователя",
+        "description": "Вычисляет вероятность активности пользователя на основе даты регистрации и последней активности.",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID пользователя для расчета вероятности активности",
+            "required": true,
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Вероятность активности пользователя",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "user_id": {
+                  "type": "integer"
+                },
+                "activity_probability": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Пользователь не найден"
+          }
+        }
+      }
+    },
+    "/users/statistics": {
+      "get": {
+        "summary": "Статистика пользователей",
+        "description": "Возвращает статистику по пользователям, включая количество регистраций за последние 7 дней, топ-5 самых длинных имен и пропорции пользователей с определенными email доменами.",
+        "responses": {
+          "200": {
+            "description": "Статистика пользователей",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "users_last_7_days": {
+                  "type": "integer"
+                },
+                "top_5_longest_names": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/User"
+                  }
+                },
+                "email_domain_proportion": {
+                  "type": "object",
+                  "properties": {
+                    "domain": {
+                      "type": "string"
+                    },
+                    "total_users": {
+                      "type": "integer"
+                    },
+                    "domain_users": {
+                      "type": "integer"
+                    },
+                    "proportions": {
+                      "type": "number"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        },
+        "registration_date": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "last_active_date": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "UserCreate": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      },
+      "required": ["username", "email"]
+    }
+  }
+}
