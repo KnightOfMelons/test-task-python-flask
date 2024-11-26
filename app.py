@@ -174,7 +174,7 @@ def get_users():
 @app.route("/users/<int:user_id>", methods=["GET"])
 def get_user(user_id):
     """
-    Возвращает информацию о пользователе по его уникальному идентификатору и обновляет дату его последней активности..
+    Возвращает информацию о пользователе по его уникальному идентификатору и обновляет дату его последней активности.
 
     Аргументы:
         user_id (int): Уникальный идентификатор пользователя.
@@ -186,9 +186,16 @@ def get_user(user_id):
     try:
         user = get_user_by_id(user_id)
         if user:
+            # Сюда добавил фичу с тем, чтобы активность выводилась также с запросом информации по пользователю
             user.last_active_date = datetime.utcnow()
             db.session.commit()
-            return make_response(jsonify({"user": user.json()}), 200)
+
+            probability = calculate_activity(user)
+
+            user_data = user.json()
+            user_data['activity_probability'] = probability
+
+            return make_response(jsonify({"user": user_data}), 200)
         return make_response(jsonify({"message": "user not found"}), 404)
     except Exception as e:
         logging.error(f"Error fetching user {user_id}: {e}")
