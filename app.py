@@ -1,7 +1,7 @@
 import logging
 from flask import Flask, request, jsonify, make_response
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timedelta
 from email_validator import validate_email, EmailNotValidError
 
 app = Flask(__name__)
@@ -209,6 +209,26 @@ def delete_user(user_id):
             return make_response(jsonify({"message": "user deleted"}), 200)
         return make_response(jsonify({"message": "user not found"}), 404)
     except Exception as e:
+        return make_response(jsonify({"message": str(e)}), 500)
+
+
+@app.route("/users/last_7_days", methods=["GET"])
+def get_users_last_7_days():
+    """
+    Подсчитывает количество пользователей, зарегистрированных за последние 7 дней.
+
+    Возвращает:
+        Response: Ответ с кодом состояния 200 и количеством пользователей, зарегистрированных за последние 7 дней.
+    """
+    try:
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+
+        user_count = User.query.filter(User.registration_date >= seven_days_ago).count()
+
+        return make_response(jsonify({"users_count_7_days": user_count}), 200)
+
+    except Exception as e:
+        logging.error(f"Error fetching users count for last 7 days: {e}")
         return make_response(jsonify({"message": str(e)}), 500)
 
 
