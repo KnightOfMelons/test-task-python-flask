@@ -232,6 +232,28 @@ def get_users_last_7_days():
         return make_response(jsonify({"message": str(e)}), 500)
 
 
+@app.route("/users/top_5_longest_names", methods=["GET"])
+def get_top_5_longest_name():
+    """
+    Возвращает топ-5 пользователей с самыми длинными именами.
+
+    Возвращает:
+        Response: Ответ с кодом состояния 200 и списком пользователей с самыми длинными именами.
+    """
+
+    try:
+        all_users = User.query.all()
+
+        top_users = sorted(all_users, key=lambda user: len(user.username), reverse=True)[:5]
+
+        # Единственное - тут решил выводить в принципе пользователя со всей его информацией (почта, дата регистрации),
+        # но если нужно потом только имена выводить, то могу переделать
+        return make_response(jsonify({"top_5_longest_names": [user.json() for user in top_users]}), 200)
+    except Exception as e:
+        logging.error(f"Error fetching top 5 users with longest names: {e}")
+        return make_response(jsonify({"message": str(e)}), 500)
+
+
 if __name__ == "__main__":
     """
     Запускает приложение Flask на локальном сервере с включенным режимом отладки.
