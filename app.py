@@ -78,7 +78,7 @@ def calculate_activity(user):
     # этого, но пока не понял, как правильно со всем этим состыковать/взаимодействовать. Попозже для себя разберусь,
     # скорее всего
 
-    # Тут подразумевается, что если пользователь долгое время не активень, то вероятность очень низкая
+    # Тут подразумевается, что если пользователь долгое время не активен, то вероятность очень низкая
     if not user.last_active_date:
         return 10
 
@@ -347,6 +347,48 @@ def get_activity_probability(user_id):
         return make_response(jsonify({"message": "User not found"}), 404)
     except Exception as e:
         logging.error(f"Error fetching activity probability for user {user_id}: {e}")
+        return make_response(jsonify({"message": str(e)}), 500)
+
+
+@app.route("/users/statistics", methods=["GET"])
+def get_user_statistics():
+    """
+    Возвращает комбинированную статистику:
+    - Количество пользователей за последние 7 дней.
+    - Топ-5 пользователей с самыми длинными именами.
+    - Доля пользователей с определенным доменом электронной почты.
+
+    Параметры:
+        - `domain` (str): Домен электронной почты (по умолчанию 'mail.ru').
+
+    Возвращает:
+        Response: JSON с объединенной статистикой.
+    """
+    try:
+        domain = request.args.get("domain", "mail.ru")
+
+        seven_days_ago = datetime.utcnow() - timedelta(days=7)
+        user_last_7_days = User.query.filter(User.registration_date >= seven_days_ago).count()
+
+        all_users = User.query.all()
+        top_5_longest_names = sorted(all_users, key=lambda user: len(user.username), reverse=True)[:5]
+        top_5_longest_names_json = [user.json() for user in top_5_longest_names]
+
+        domain_users = list(filter(lambda user: user.email.endswith(f"@{domain}"), all_users))
+        total_users = len(all_users)
+        domain_proportion = len(domain_users) / total_users if total_users > 0 else 0
+
+        return make_response(jsonify({"user_count_7_days": user_last_7_days,
+                                      "top_5_longest_names": top_5_longest_names_json,
+                                      "email_domain_proportion": {
+                                          "domain": domain,
+                                          "total_users": total_users,
+                                          "domain_users": len(domain_users),
+                                          "proportion": domain_proportion
+                                      }}), 200)
+
+    except Exception as e:
+        logging.error(f"Error fetching combined statistics: {e}")
         return make_response(jsonify({"message": str(e)}), 500)
 
 
