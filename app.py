@@ -254,6 +254,40 @@ def get_top_5_longest_name():
         return make_response(jsonify({"message": str(e)}), 500)
 
 
+@app.route("/users/email_domain_proportion", methods=["GET"])
+def get_email_domain_proportion():
+    """
+    Определяет долю пользователей, у которых адрес электронной почты зарегистрирован в заданном домене.
+
+    Параметры:
+        - `domain` (str): Домен электронной почты, по умолчанию 'mail.ru'.
+
+    Возвращает:
+        Response: Ответ с кодом состояния 200 и долей пользователей с указанным доменом.
+    """
+    try:
+        # Я тут использовал только не example.com, как в ТЗ, а mail.ru
+        domain = request.args.get("domain", "mail.ru")
+
+        users = User.query.all()
+
+        domain_users = filter(lambda user: user.email.endswith(f"@{domain}"), users)
+        domain_users = list(domain_users)
+
+        if len(users) > 0:
+            proportions = len(domain_users) / len(users)
+        else:
+            proportions = 0
+
+        return make_response(jsonify({"domain": domain,
+                                      "total_users": len(users),
+                                      "domain_users": len(domain_users),
+                                      "proportions": proportions}), 200)
+    except Exception as e:
+        logging.error(f"Error calculating email domain proportions: {e}")
+        return make_response(jsonify({"message": str(e)}), 500)
+
+
 if __name__ == "__main__":
     """
     Запускает приложение Flask на локальном сервере с включенным режимом отладки.
